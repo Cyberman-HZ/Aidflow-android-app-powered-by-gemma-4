@@ -22,7 +22,7 @@ object PdfExporter {
     private const val LINE_HEIGHT_BODY = 16f
     private const val LINE_HEIGHT_HEADING = 22f
 
-    fun write(out: OutputStream, doc: ExportDocument) {
+    fun write(out: OutputStream, doc: ExportDocument, scope: ExportScope) {
         val pdf = PdfDocument()
 
         val titlePaint = Paint().apply {
@@ -43,18 +43,23 @@ object PdfExporter {
         val writer = PageWriter(pdf, bodyPaint)
 
         writer.drawText(doc.title, titlePaint, LINE_HEIGHT_HEADING)
-        writer.drawText(
-            "From ${doc.sourceLanguage} to ${doc.targetLanguage}",
-            mutedPaint, LINE_HEIGHT_BODY,
-        )
+        val subtitle = when (scope) {
+            ExportScope.Original -> doc.sourceLanguage
+            ExportScope.Translation -> doc.targetLanguage
+            ExportScope.Both -> "From ${doc.sourceLanguage} to ${doc.targetLanguage}"
+        }
+        writer.drawText(subtitle, mutedPaint, LINE_HEIGHT_BODY)
         writer.skip(LINE_HEIGHT_BODY)
 
-        writer.drawText("Original", sectionPaint, LINE_HEIGHT_HEADING)
-        writeParagraphs(writer, doc.originalFullText, bodyPaint)
-        writer.skip(LINE_HEIGHT_BODY)
-
-        writer.drawText("Translation", sectionPaint, LINE_HEIGHT_HEADING)
-        writeParagraphs(writer, doc.translatedFullText, bodyPaint)
+        if (scope.includesOriginal) {
+            writer.drawText("Original", sectionPaint, LINE_HEIGHT_HEADING)
+            writeParagraphs(writer, doc.originalFullText, bodyPaint)
+            writer.skip(LINE_HEIGHT_BODY)
+        }
+        if (scope.includesTranslation) {
+            writer.drawText("Translation", sectionPaint, LINE_HEIGHT_HEADING)
+            writeParagraphs(writer, doc.translatedFullText, bodyPaint)
+        }
 
         writer.finish()
         pdf.writeTo(out)

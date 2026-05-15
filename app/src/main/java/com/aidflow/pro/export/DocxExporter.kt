@@ -14,26 +14,35 @@ import java.util.zip.ZipOutputStream
  */
 object DocxExporter {
 
-    fun write(out: OutputStream, doc: ExportDocument) {
+    fun write(out: OutputStream, doc: ExportDocument, scope: ExportScope) {
         ZipOutputStream(out).use { zip ->
             zip.entry("[Content_Types].xml", CONTENT_TYPES)
             zip.entry("_rels/.rels", ROOT_RELS)
             zip.entry("word/_rels/document.xml.rels", DOCUMENT_RELS)
             zip.entry("word/styles.xml", STYLES)
-            zip.entry("word/document.xml", buildDocument(doc))
+            zip.entry("word/document.xml", buildDocument(doc, scope))
         }
     }
 
-    private fun buildDocument(doc: ExportDocument): String {
+    private fun buildDocument(doc: ExportDocument, scope: ExportScope): String {
+        val subtitle = when (scope) {
+            ExportScope.Original -> doc.sourceLanguage
+            ExportScope.Translation -> doc.targetLanguage
+            ExportScope.Both -> "From ${doc.sourceLanguage} to ${doc.targetLanguage}"
+        }
         val body = buildString {
             append(headingParagraph(doc.title, level = 1))
-            append(metaParagraph("From ${doc.sourceLanguage} to ${doc.targetLanguage}"))
+            append(metaParagraph(subtitle))
             append(emptyParagraph())
-            append(headingParagraph("Original", level = 2))
-            doc.originalFullText.split('\n').forEach { append(bodyParagraph(it)) }
-            append(emptyParagraph())
-            append(headingParagraph("Translation", level = 2))
-            doc.translatedFullText.split('\n').forEach { append(bodyParagraph(it)) }
+            if (scope.includesOriginal) {
+                append(headingParagraph("Original", level = 2))
+                doc.originalFullText.split('\n').forEach { append(bodyParagraph(it)) }
+                append(emptyParagraph())
+            }
+            if (scope.includesTranslation) {
+                append(headingParagraph("Translation", level = 2))
+                doc.translatedFullText.split('\n').forEach { append(bodyParagraph(it)) }
+            }
         }
         return DOCUMENT_TEMPLATE.replace("{{BODY}}", body)
     }

@@ -27,6 +27,7 @@
     <string name="scan_take_photo">Take photo</string>
     <string name="scan_extract">Extract text</string>
     <string name="scan_clean_gemma">Clean with Gemma</string>
+    <string name="scan_reread_gemma">Re-read with Gemma vision</string>
     <string name="scan_translate">Translate</string>
     <string name="scan_export">Export</string>
     <string name="scan_tab_original">Original</string>
@@ -44,7 +45,12 @@
     <string name="translate_copy">Copy</string>
 
     <!-- Export -->
-    <string name="export_title">Export as</string>
+    <string name="export_title">Export</string>
+    <string name="export_scope_label">What to include</string>
+    <string name="export_scope_original">Original only</string>
+    <string name="export_scope_translation">Translation only</string>
+    <string name="export_scope_both">Both</string>
+    <string name="export_format_label">File format</string>
     <string name="export_txt">Plain text (.txt)</string>
     <string name="export_csv">Spreadsheet (.csv)</string>
     <string name="export_pdf">PDF document (.pdf)</string>

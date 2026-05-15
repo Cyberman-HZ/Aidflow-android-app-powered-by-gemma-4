@@ -17,25 +17,28 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Top-level coordinator: takes an [ExportDocument] + [ExportFormat], routes to the
- * right serializer, and writes to the Downloads collection via MediaStore (on Q+)
- * or to app-scoped external storage as a fallback. Returns a content:// URI that
- * the caller can hand to [shareIntent].
+ * Top-level coordinator: takes an [ExportDocument] + [ExportFormat] + [ExportScope],
+ * routes to the right serializer, and writes to the Downloads collection via
+ * MediaStore (on Q+) or to app-scoped external storage as a fallback. Returns a
+ * content:// URI that the caller can hand to [shareIntent].
  */
 class Exporter(private val context: Context) {
 
-    suspend fun export(doc: ExportDocument, format: ExportFormat): Uri =
-        withContext(Dispatchers.IO) {
-            val baseName = sanitize(doc.title)
-            val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-            val fileName = "${baseName}_$timestamp.${format.extension}"
+    suspend fun export(
+        doc: ExportDocument,
+        format: ExportFormat,
+        scope: ExportScope,
+    ): Uri = withContext(Dispatchers.IO) {
+        val baseName = sanitize(doc.title)
+        val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+        val fileName = "${baseName}_${scope.suffix}_$timestamp.${format.extension}"
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                exportViaMediaStore(doc, format, fileName)
-            } else {
-                exportToAppFiles(doc, format, fileName)
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            exportViaMediaStore(doc, format, scope, fileName)
+        } else {
+            exportToAppFiles(doc, format, scope, fileName)
         }
+    }
 
     fun shareIntent(uri: Uri, mime: String): Intent =
         Intent(Intent.ACTION_SEND).apply {
@@ -47,6 +50,7 @@ class Exporter(private val context: Context) {
     private fun exportViaMediaStore(
         doc: ExportDocument,
         format: ExportFormat,
+        scope: ExportScope,
         fileName: String,
     ): Uri {
         val resolver = context.contentResolver
@@ -59,7 +63,7 @@ class Exporter(private val context: Context) {
         }
         val uri = resolver.insert(collection, values)
             ?: error("MediaStore refused to allocate a Downloads entry")
-        resolver.openOutputStream(uri)?.use { writeTo(it, doc, format) }
+        resolver.openOutputStream(uri)?.use { writeTo(it, doc, format, scope) }
             ?: error("MediaStore returned a null output stream")
         values.clear()
         values.put(MediaStore.Downloads.IS_PENDING, 0)
@@ -70,11 +74,12 @@ class Exporter(private val context: Context) {
     private fun exportToAppFiles(
         doc: ExportDocument,
         format: ExportFormat,
+        scope: ExportScope,
         fileName: String,
     ): Uri {
         val dir = File(context.filesDir, "exports").apply { mkdirs() }
         val file = File(dir, fileName)
-        file.outputStream().use { writeTo(it, doc, format) }
+        file.outputStream().use { writeTo(it, doc, format, scope) }
         return FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -82,12 +87,17 @@ class Exporter(private val context: Context) {
         )
     }
 
-    private fun writeTo(out: OutputStream, doc: ExportDocument, format: ExportFormat) {
+    private fun writeTo(
+        out: OutputStream,
+        doc: ExportDocument,
+        format: ExportFormat,
+        scope: ExportScope,
+    ) {
         when (format) {
-            ExportFormat.Txt -> TextExporter.write(out, doc)
-            ExportFormat.Csv -> CsvExporter.write(out, doc)
-            ExportFormat.Pdf -> PdfExporter.write(out, doc)
-            ExportFormat.Docx -> DocxExporter.write(out, doc)
+            ExportFormat.Txt -> TextExporter.write(out, doc, scope)
+            ExportFormat.Csv -> CsvExporter.write(out, doc, scope)
+            ExportFormat.Pdf -> PdfExporter.write(out, doc, scope)
+            ExportFormat.Docx -> DocxExporter.write(out, doc, scope)
         }
     }
 

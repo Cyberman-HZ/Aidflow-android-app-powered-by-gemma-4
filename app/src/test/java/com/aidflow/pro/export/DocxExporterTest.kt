@@ -21,7 +21,7 @@ class DocxExporterTest {
             originalFullText = "Line 1\nLine 2",
             translatedFullText = "Translated line 1\nTranslated line 2",
         )
-        DocxExporter.write(out, doc)
+        DocxExporter.write(out, doc, ExportScope.Both)
 
         val entries = mutableMapOf<String, String>()
         ZipInputStream(ByteArrayInputStream(out.toByteArray())).use { zip ->
@@ -45,6 +45,35 @@ class DocxExporterTest {
     }
 
     @Test
+    fun `Original scope omits the translation section`() {
+        val out = ByteArrayOutputStream()
+        DocxExporter.write(
+            out,
+            ExportDocument(
+                title = "Original-only",
+                sourceLanguage = "Spanish",
+                targetLanguage = "English",
+                lines = emptyList(),
+                originalFullText = "first line",
+                translatedFullText = "translated A",
+            ),
+            ExportScope.Original,
+        )
+        var document = ""
+        ZipInputStream(ByteArrayInputStream(out.toByteArray())).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.name == "word/document.xml") document = zip.readBytes().toString(Charsets.UTF_8)
+                zip.closeEntry()
+            }
+        }
+        assertTrue("original section heading expected", document.contains("Original"))
+        assertTrue("translation section must NOT be present", !document.contains(">Translation<"))
+        assertTrue(document.contains("first line"))
+        assertTrue(!document.contains("translated A"))
+    }
+
+    @Test
     fun `xml-special characters are escaped`() {
         val out = ByteArrayOutputStream()
         DocxExporter.write(
@@ -57,6 +86,7 @@ class DocxExporterTest {
                 originalFullText = "5 < 6 & 7 > 6",
                 translatedFullText = "",
             ),
+            ExportScope.Both,
         )
         var document = ""
         ZipInputStream(ByteArrayInputStream(out.toByteArray())).use { zip ->

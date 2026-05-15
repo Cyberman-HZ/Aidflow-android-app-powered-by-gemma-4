@@ -27,28 +27,49 @@ class CsvExporterTest {
         assertEquals("\"line1\nline2\"", CsvExporter.escape("line1\nline2"))
     }
 
+    private val sampleDoc = ExportDocument(
+        title = "t",
+        sourceLanguage = "Spanish",
+        targetLanguage = "English",
+        lines = listOf(
+            ExportDocument.Line("Hola, mundo", "Hello, world"),
+            ExportDocument.Line("Línea 2", "Line 2"),
+        ),
+        originalFullText = "x",
+        translatedFullText = "y",
+    )
+
     @Test
-    fun `write produces UTF-8 BOM, header, then row per line with CRLF`() {
-        val doc = ExportDocument(
-            title = "t",
-            sourceLanguage = "Spanish",
-            targetLanguage = "English",
-            lines = listOf(
-                ExportDocument.Line("Hola, mundo", "Hello, world"),
-                ExportDocument.Line("Línea 2", "Line 2"),
-            ),
-            originalFullText = "x",
-            translatedFullText = "y",
-        )
+    fun `Both scope writes both columns`() {
         val out = ByteArrayOutputStream()
-        CsvExporter.write(out, doc)
+        CsvExporter.write(out, sampleDoc, ExportScope.Both)
         val text = out.toString(Charsets.UTF_8)
-        // BOM (U+FEFF) at start
         assertEquals('﻿', text[0])
-        // Header fields have spaces and parens but no commas/quotes, so they are not quoted.
-        assertTrue("Header row missing", text.contains("Line,Original (Spanish),Translation (English)"))
-        assertTrue("CRLF expected between rows", text.contains("\r\n"))
-        // Comma-bearing source field must be quoted
+        assertTrue(text.contains("Line,Original (Spanish),Translation (English)"))
         assertTrue(text.contains("\"Hola, mundo\""))
+        assertTrue(text.contains("Hello, world"))
+        assertTrue("CRLF expected between rows", text.contains("\r\n"))
+    }
+
+    @Test
+    fun `Original scope omits the translation column`() {
+        val out = ByteArrayOutputStream()
+        CsvExporter.write(out, sampleDoc, ExportScope.Original)
+        val text = out.toString(Charsets.UTF_8)
+        assertTrue(text.contains("Line,Original (Spanish)"))
+        assertTrue(!text.contains("Translation"))
+        assertTrue(text.contains("\"Hola, mundo\""))
+        assertTrue(!text.contains("Hello, world"))
+    }
+
+    @Test
+    fun `Translation scope omits the original column`() {
+        val out = ByteArrayOutputStream()
+        CsvExporter.write(out, sampleDoc, ExportScope.Translation)
+        val text = out.toString(Charsets.UTF_8)
+        assertTrue(text.contains("Line,Translation (English)"))
+        assertTrue(!text.contains("Original"))
+        assertTrue(text.contains("Hello, world"))
+        assertTrue(!text.contains("Hola"))
     }
 }

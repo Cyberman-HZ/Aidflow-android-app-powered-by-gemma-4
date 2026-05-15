@@ -8,6 +8,16 @@ enum class ExportFormat(val mime: String, val extension: String) {
     Docx("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx");
 }
 
+/** Which side of the document the user wants in the export. */
+enum class ExportScope(val suffix: String) {
+    Original("original"),
+    Translation("translation"),
+    Both("both");
+
+    val includesOriginal: Boolean get() = this != Translation
+    val includesTranslation: Boolean get() = this != Original
+}
+
 /**
  * The payload an exporter consumes. Carries enough information that a CSV row,
  * a PDF page, and a DOCX paragraph can all be generated from the same data.

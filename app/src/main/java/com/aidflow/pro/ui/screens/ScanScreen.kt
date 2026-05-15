@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
@@ -23,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aidflow.pro.R
 import com.aidflow.pro.export.ExportFormat
+import com.aidflow.pro.export.ExportScope
 import com.aidflow.pro.ui.ScanViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
@@ -131,21 +134,21 @@ fun ScanScreen(onBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
                             onClick = vm::cleanWithGemma,
-                            enabled = state.hasRaw && !state.isCleaning,
+                            enabled = state.hasRaw && !state.isBusy,
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(Icons.Filled.AutoFixHigh, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.scan_clean_gemma))
                         }
-                        Button(
-                            onClick = vm::translate,
-                            enabled = state.hasRaw && !state.isTranslating,
+                        OutlinedButton(
+                            onClick = { vm.rereadWithGemmaVision(context) },
+                            enabled = state.imageUri != null && !state.isBusy,
                             modifier = Modifier.weight(1f),
                         ) {
-                            Icon(Icons.Filled.Translate, contentDescription = null)
+                            Icon(Icons.Filled.Visibility, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.scan_translate))
+                            Text(stringResource(R.string.scan_reread_gemma))
                         }
                     }
                     if (state.hasCleaned) {
@@ -154,14 +157,25 @@ fun ScanScreen(onBack: () -> Unit) {
                             text = state.cleanedText,
                         )
                     }
+                    Button(
+                        onClick = vm::translate,
+                        enabled = state.hasRaw && !state.isBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Translate, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.scan_translate))
+                    }
                     if (state.hasTranslated) {
                         OutputCard(
                             title = stringResource(R.string.scan_tab_translated),
                             text = state.translatedText,
                         )
+                    }
+                    if (state.canExport) {
                         Button(
                             onClick = { showExport = true },
-                            enabled = state.readyToExport && !state.isExporting,
+                            enabled = !state.isBusy,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.Filled.FileDownload, contentDescription = null)
@@ -173,11 +187,11 @@ fun ScanScreen(onBack: () -> Unit) {
             }
 
             BusyOverlay(
-                visible = state.isRecognizing || state.isCleaning ||
-                    state.isTranslating || state.isExporting,
+                visible = state.isBusy,
                 label = when {
                     state.isRecognizing -> "Recognizing text…"
                     state.isCleaning -> "Cleaning with Gemma 4…"
+                    state.isReadingWithGemma -> "Reading image with Gemma 4 vision…"
                     state.isTranslating -> "Translating with Gemma 4…"
                     state.isExporting -> "Exporting…"
                     else -> ""
@@ -186,10 +200,11 @@ fun ScanScreen(onBack: () -> Unit) {
 
             if (showExport) {
                 ExportSheet(
+                    hasTranslation = state.hasTranslated,
                     onDismiss = { showExport = false },
-                    onPick = { fmt ->
+                    onExport = { scope, fmt ->
                         showExport = false
-                        vm.export(fmt)
+                        vm.export(fmt, scope)
                     },
                 )
             }
@@ -221,25 +236,76 @@ private fun OutputCard(title: String, text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExportSheet(onDismiss: () -> Unit, onPick: (ExportFormat) -> Unit) {
+private fun ExportSheet(
+    hasTranslation: Boolean,
+    onDismiss: () -> Unit,
+    onExport: (ExportScope, ExportFormat) -> Unit,
+) {
+    var scope by remember(hasTranslation) {
+        mutableStateOf(if (hasTranslation) ExportScope.Both else ExportScope.Original)
+    }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(stringResource(R.string.export_title), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            ExportRow(stringResource(R.string.export_txt)) { onPick(ExportFormat.Txt) }
-            ExportRow(stringResource(R.string.export_csv)) { onPick(ExportFormat.Csv) }
-            ExportRow(stringResource(R.string.export_pdf)) { onPick(ExportFormat.Pdf) }
-            ExportRow(stringResource(R.string.export_docx)) { onPick(ExportFormat.Docx) }
+            Text(stringResource(R.string.export_title), style = MaterialTheme.typography.titleLarge)
+
+            Text(
+                stringResource(R.string.export_scope_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ScopeChips(
+                selected = scope,
+                onSelect = { scope = it },
+                translationEnabled = hasTranslation,
+            )
+
+            Text(
+                stringResource(R.string.export_format_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FormatRow(stringResource(R.string.export_txt)) { onExport(scope, ExportFormat.Txt) }
+            FormatRow(stringResource(R.string.export_csv)) { onExport(scope, ExportFormat.Csv) }
+            FormatRow(stringResource(R.string.export_pdf)) { onExport(scope, ExportFormat.Pdf) }
+            FormatRow(stringResource(R.string.export_docx)) { onExport(scope, ExportFormat.Docx) }
         }
     }
 }
 
 @Composable
-private fun ExportRow(label: String, onClick: () -> Unit) {
+private fun ScopeChips(
+    selected: ExportScope,
+    onSelect: (ExportScope) -> Unit,
+    translationEnabled: Boolean,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = selected == ExportScope.Original,
+            onClick = { onSelect(ExportScope.Original) },
+            label = { Text(stringResource(R.string.export_scope_original)) },
+        )
+        FilterChip(
+            selected = selected == ExportScope.Translation,
+            onClick = { onSelect(ExportScope.Translation) },
+            enabled = translationEnabled,
+            label = { Text(stringResource(R.string.export_scope_translation)) },
+        )
+        FilterChip(
+            selected = selected == ExportScope.Both,
+            onClick = { onSelect(ExportScope.Both) },
+            enabled = translationEnabled,
+            label = { Text(stringResource(R.string.export_scope_both)) },
+        )
+    }
+}
+
+@Composable
+private fun FormatRow(label: String, onClick: () -> Unit) {
     TextButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -248,9 +314,4 @@ private fun ExportRow(label: String, onClick: () -> Unit) {
             Text(label)
         }
     }
-}
-
-@Composable
-private fun SelectionContainer(content: @Composable () -> Unit) {
-    androidx.compose.foundation.text.selection.SelectionContainer(content = content)
 }
