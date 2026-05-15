@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand palette: warm humanitarian blue + amber accent -->
+    <color name="brand_primary">#1A6FCB</color>
+    <color name="brand_primary_dark">#0A4E96</color>
+    <color name="brand_accent">#F5A623</color>
+    <color name="surface_light">#FAFBFC</color>
+    <color name="surface_dark">#0F1620</color>
+    <color name="on_surface_light">#10141A</color>
+    <color name="on_surface_dark">#E8EEF6</color>
+    <color name="ic_launcher_background">#1A6FCB</color>
+</resources>
