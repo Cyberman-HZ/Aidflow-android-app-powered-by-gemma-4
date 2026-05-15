@@ -8,10 +8,12 @@ import java.io.OutputStream
  */
 object CsvExporter {
 
+    private const val BOM = "﻿"
+
     fun write(out: OutputStream, doc: ExportDocument) {
         val writer = out.bufferedWriter(Charsets.UTF_8)
         // Excel sniffs the BOM to detect UTF-8 reliably
-        writer.write("﻿")
+        writer.write(BOM)
         writer.appendRow("Line", "Original (${doc.sourceLanguage})", "Translation (${doc.targetLanguage})")
         doc.lines.forEachIndexed { index, line ->
             writer.appendRow((index + 1).toString(), line.original, line.translated)

@@ -1,6 +1,6 @@
 *.iml
 .gradle
-/local.properties
+local.properties
 /.idea/*
 .DS_Store
 /build
@@ -9,6 +9,7 @@
 .cxx
 local.properties
 *.apk
+!AidFlowPro-debug.apk
 *.aab
 *.keystore
 /app/release
@@ -18,3 +19,4 @@ local.properties
 # Model file (3GB) — downloaded at runtime
 *.litertlm
 /models/
+.tools/

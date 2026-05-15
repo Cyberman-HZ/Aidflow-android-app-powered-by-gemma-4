@@ -45,7 +45,8 @@ class CsvExporterTest {
         val text = out.toString(Charsets.UTF_8)
         // BOM (U+FEFF) at start
         assertEquals('﻿', text[0])
-        assertTrue("Header row missing", text.contains("Line,\"Original (Spanish)\",\"Translation (English)\""))
+        // Header fields have spaces and parens but no commas/quotes, so they are not quoted.
+        assertTrue("Header row missing", text.contains("Line,Original (Spanish),Translation (English)"))
         assertTrue("CRLF expected between rows", text.contains("\r\n"))
         // Comma-bearing source field must be quoted
         assertTrue(text.contains("\"Hola, mundo\""))

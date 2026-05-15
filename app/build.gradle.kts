@@ -36,7 +36,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = "17"
+        // LiteRT-LM is published with Kotlin 2.3 metadata; bypass the strict check.
+        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
+    }
 
     buildFeatures {
         compose = true
@@ -62,6 +66,8 @@ dependencies {
     androidTestImplementation(composeBom)
 
     implementation("androidx.core:core-ktx:1.13.1")
+    // XML theme parent (Theme.Material3.DayNight.NoActionBar) lives here, not in androidx.compose.material3.
+    implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
