@@ -104,14 +104,33 @@ Tagalog.
 The translator can pair any two of these via Gemma 4. The on-device ASR and TTS depend on
 the user's installed Android language packs.
 
-## Building
+## Installing the prebuilt APK
 
-Requirements: Android Studio Iguana or newer, Android SDK 34, a device or emulator with
-**Android 12+ (API 31)** and at least **3 GB free storage + 2 GB free RAM**.
+A prebuilt debug APK is checked in: [`AidFlowPro-debug.apk`](AidFlowPro-debug.apk) (~144 MB).
+
+1. Enable **Settings → Apps → Install unknown apps** for your file manager / browser.
+2. Copy the APK to your phone (USB, email, cloud) and tap to install.
+3. Or install via adb: `adb install AidFlowPro-debug.apk`.
+
+The app needs **Android 12+ (API 31)**. Voice translation works best on **Android 13+ (API 33)** where the system provides a guaranteed on-device speech recognizer.
+
+On first launch the app downloads the Gemma 4 E2B model (~3 GB) over Wi-Fi.
+
+## Building from source
+
+Requirements: Android Studio Iguana+ OR JDK 17 + Android SDK 34 + Gradle 8.7.
 
 ```bash
-./gradlew assembleDebug
-./gradlew installDebug
+./gradlew testDebugUnitTest      # 12 unit tests
+./gradlew assembleDebug          # outputs app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug           # if a device is connected
+```
+
+On Windows you can use the convenience wrapper that bundles JDK/Gradle/SDK env-vars:
+
+```powershell
+.\build.ps1 test
+.\build.ps1 apk
 ```
 
 On first launch the app downloads `gemma-4-E2B-it.litertlm` (~3 GB) from
