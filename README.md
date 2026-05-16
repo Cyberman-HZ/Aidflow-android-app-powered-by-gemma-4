@@ -218,15 +218,19 @@ team is back in the field.
 
 ## Installing the prebuilt APK
 
-A signed debug APK is checked into the repository root:
-
-**[`AidFlowPro-debug.apk`](AidFlowPro-debug.apk)** (~145 MB)
+The signed debug APK (~154 MB) is published on the **[Releases page](../../releases/latest)**
+because it exceeds GitHub's per-file size cap. Grab `AidFlowPro-debug.apk`
+from the most recent release.
 
 1. Copy the APK to your phone (USB, email, Drive — anything).
-2. On the phone: **Settings → Apps → Install unknown apps** → enable for your
-   file manager / browser.
-3. Tap the APK to install. Allow camera + microphone permissions when asked.
-4. Via adb: `adb install AidFlowPro-debug.apk`.
+2. On the phone: **Settings → Apps → Install unknown apps** → enable for the
+   file manager / browser you use to open the APK.
+3. Tap the APK to install. Allow **camera** and **microphone** permissions
+   when first asked.
+4. Or via adb on a computer with the phone connected in developer mode:
+   ```
+   adb install AidFlowPro-debug.apk
+   ```
 
 Requirements: **Android 12+ (API 31)**, **3 GB free storage**, **2 GB free
 RAM**. Voice translation works best on Android 13+ (API 33) where Google
@@ -235,6 +239,109 @@ ships a guaranteed on-device speech recognizer.
 On first launch the app downloads `gemma-4-E2B-it.litertlm` (~2.6 GB) from
 HuggingFace. Wi-Fi is strongly recommended; the in-app downloader gates on
 unmetered networks unless you tick "allow mobile data."
+
+## Testing the app — step-by-step walkthrough for judges
+
+These flows are what to try, in order, to cover every Gemma 4 use case. Most
+take under a minute once the model is loaded.
+
+### Test 1 — First-launch model setup (~3 minutes on Wi-Fi)
+
+1. Open AidFlow Pro for the first time. You land on the **One-time setup**
+   screen.
+2. Tap **Download model**. Watch the progress bar; ~2.6 GB downloads from
+   HuggingFace.
+3. After download, the screen says **"Loading Gemma 4 into memory…"**. This
+   takes 60–90 s the first time (LiteRT-LM rebuilds the XNNPack kernel
+   cache); subsequent app launches are ~15 s.
+4. You should land on the Home screen with four feature cards and a
+   "**100% offline**" badge.
+
+### Test 2 — Family intake by voice → Excel for the web app (the headline demo)
+
+1. From Home tap **Family intake**.
+2. With **Speak** mode selected, tap the **Speak** button (allow microphone
+   if asked) and say:
+   > *"Ahmed Mahmoud, 42, four children, youngest is six with asthma,
+   > displaced from Aleppo three weeks ago, no current income."*
+3. Tap **Extract with Gemma 4**. After a few seconds you'll see a draft
+   record: head name, member count, children-under-5, displacement chip set
+   to *Recently displaced*, income chip set to *None*, a medical-conditions
+   entry, and a **priority score** chip (e.g. `Priority HIGH (74)`).
+4. Edit anything that's wrong; tap **Save & start next family**.
+5. Repeat with a second family.
+6. Tap **Export to Excel / CSV**, pick **Excel (.xlsx) — Recommended**.
+7. Snackbar says "Saved to Downloads — Share." Open the file in your phone's
+   spreadsheet app. Verify columns match the **AidFlow web app's canonical
+   schema**: `head_name, member_count, children_under_5, elderly_count,
+   has_pregnant_member, medical_conditions, displacement_status,
+   income_level, location_sector, street, city, notes, priority_score,
+   priority_reason, id`.
+
+### Test 3 — Family intake from a paper form (Gemma 4 vision)
+
+1. Hand-write a quick family registration on paper (name, members, city,
+   medical condition). Or use your existing intake sheets.
+2. Family intake → tap **Scan paper form** chip.
+3. Tap **Take photo**. The Google document scanner opens:
+   - Notice the green edge-detection outline on the page.
+   - Toggle **flash** and switch **lens** — the controls are in the
+     scanner's overlay.
+   - Capture. Adjust corners if the auto-detect missed; tap **Next**.
+4. Back in AidFlow Pro tap **Extract with Gemma 4**. You should see fields
+   populated from your handwriting.
+
+### Test 4 — Identify items from a photo
+
+1. From Home tap **Identify items**.
+2. Tap **Take photo** and frame a stack of supplies (bottles, blankets,
+   medicine boxes — anything that looks like aid inventory). The
+   scanner is in BASE mode so it captures without forcing a tight crop.
+3. After a few seconds you'll see a list with name / quantity / unit /
+   category chips per item. Edit any field that's wrong.
+4. Add more photos to stack a multi-photo inventory if you like.
+5. Tap **Export inventory to Excel / CSV** and open the resulting XLSX.
+
+### Test 5 — Translate a document end-to-end
+
+1. From Home tap **Scan a document**.
+2. Set **From** to the source language (e.g. Spanish) and **To** to the
+   target language (e.g. English).
+3. Tap **Take photo** of a foreign-language prescription / sign / form.
+   The doc scanner is in FULL mode — it will auto-crop the page.
+4. The "Original" card fills in with ML Kit's text. Tap **Clean with Gemma**
+   to fix layout, or **Re-read with Gemma vision** to redo OCR entirely with
+   Gemma 4's multimodal pipeline (slower but stronger on handwriting and
+   non-Latin scripts).
+5. Tap **Translate** — the "Translated" card appears with Gemma 4's output.
+6. Tap **Export**. Choose scope (**Original / Translation / Both**) then a
+   format (TXT / CSV / PDF / DOCX). Verify the file opens in Word / Excel /
+   a PDF viewer.
+
+### Test 6 — Real-time voice translation
+
+1. From Home tap **Translate voice or text**.
+2. Pick a source + target language pair. (E.g. English → Arabic.)
+3. Tap **Speak** and say *"Where is the nearest hospital?"* — partial
+   transcript appears live.
+4. Stop speaking; after a few seconds the bottom card shows the translation.
+5. Tap **Play translation** — TTS speaks it aloud in the target language.
+
+### Test 7 — Offline guarantee
+
+Put the phone in **airplane mode** and repeat Tests 2 – 6. Every feature
+should still work. The only thing the app ever needs the network for is the
+one-time model download in Test 1.
+
+### Test 8 — Web-app interop check (optional, requires the AidFlow web app)
+
+1. Capture 2–3 families in Test 2 and export the XLSX.
+2. Transfer the file to a laptop running the
+   [AidFlow Pro web app](https://github.com/Cyberman-HZ/Aidflow).
+3. In the web app's **Import** dialog, select the XLSX. Notice that **every
+   column maps automatically** — no manual mapping step required.
+4. The imported families appear in the web app's family list with the
+   priority scores already populated.
 
 ## Building from source
 

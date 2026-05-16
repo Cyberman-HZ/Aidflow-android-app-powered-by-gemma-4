@@ -11,7 +11,6 @@ local.properties
 .cxx
 local.properties
 *.apk
-!AidFlowPro-debug.apk
 *.aab
 *.keystore
 /app/release
