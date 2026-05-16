@@ -32,15 +32,18 @@ communicating across language barriers where connectivity is unreliable.
 Everything runs on the phone:
 
 - **Gemma 4 E2B** (effective 2B-parameter multimodal model) via the LiteRT-LM
-  runtime — text, vision, and audio understanding without leaving the device.
+  runtime — text and vision used in this app (Gemma 4's audio modality is
+  available in the model but not wired up yet).
 - **ML Kit Text Recognition v2** for fast offline OCR.
-- **Google Document Scanner** for camera + auto-crop + perspective correction.
+- **Google Document Scanner** (Play Services on-device module) for camera +
+  auto-crop + perspective correction.
 - **Android system on-device speech recognizer** + **TextToSpeech**.
 
-The only network call AidFlow Pro Mobile ever makes is the **one-time
-download** of the Gemma 4 checkpoint (~2.6 GB) on first launch. Everything
-after that works in airplane mode — refugee camps, evacuation shelters, remote
-clinics, conflict zones.
+The only network traffic AidFlow Pro Mobile generates is two one-time
+first-launch downloads: the Gemma 4 checkpoint (~2.6 GB from HuggingFace),
+and the document-scanner module (~20 MB via Google Play Services). After
+both are cached, everything runs in airplane mode — refugee camps,
+evacuation shelters, remote clinics, conflict zones.
 
 ## How it relates to the AidFlow Pro web app
 
@@ -56,15 +59,25 @@ distribution.
 
 The interop is **deliberate and zero-friction**:
 
-- The mobile app's family-intake Excel exports use the *exact* 12 canonical
-  column names from the web app's
+- The mobile app's family-intake Excel exports name every column exactly as
+  the web app's
   [`spreadsheetImport.ts`](https://github.com/Cyberman-HZ/Aidflow/blob/main/src/services/spreadsheetImport.ts)
-  (`head_name`, `member_count`, `children_under_5`, `elderly_count`,
+  expects: `head_name`, `member_count`, `children_under_5`, `elderly_count`,
   `has_pregnant_member`, `medical_conditions`, `displacement_status`,
-  `income_level`, `location_sector`, `street`, `city`, `notes`), so importing
-  a mobile-captured file into the web app requires no column-mapping step.
-- The mobile app's priority-score prompt mirrors the web app's triage logic,
-  so families arrive in the web app already pre-scored.
+  `income_level`, `location_sector`, `street`, `city`, `notes`. All 12
+  auto-map on import — no column-mapping prompts. The export also adds three
+  mobile-only columns (`priority_score`, `priority_reason`, `id`) which the
+  web app's importer keeps by appending them to the family's `notes` field
+  (its safety behavior for unknown columns), so nothing is lost.
+- Both apps use the **same 0–100 priority scale** and the **same
+  CRITICAL / HIGH / MEDIUM / NORMAL level thresholds (80 / 60 / 40)**, so a
+  family that arrives from the mobile app already sits in the same bucket as
+  if the web app had scored it. The scoring engines are independent though:
+  the web app applies a deterministic weighted-rule formula
+  ([`priorityRules.ts`](https://github.com/Cyberman-HZ/Aidflow/blob/main/src/services/priorityRules.ts)),
+  while the mobile app asks Gemma 4 to score from the family description
+  using prose heuristics. Bucket usually agrees; individual numbers will not
+  match exactly.
 
 The two apps share a name on purpose — they are halves of the same system.
 
@@ -267,7 +280,8 @@ take under a minute once the model is loaded.
 3. Tap **Extract with Gemma 4**. After a few seconds you'll see a draft
    record: head name, member count, children-under-5, displacement chip set
    to *Recently displaced*, income chip set to *None*, a medical-conditions
-   entry, and a **priority score** chip (e.g. `Priority HIGH (74)`).
+   entry, and a **priority score** chip (typically `HIGH` for that
+   description, somewhere in the 60–79 range — exact score is up to Gemma).
 4. Edit anything that's wrong; tap **Save & start next family**.
 5. Repeat with a second family.
 6. Tap **Export to Excel / CSV**, pick **Excel (.xlsx) — Recommended**.
@@ -421,8 +435,10 @@ prompts: [`docs/PROMPT_CARDS.md`](docs/PROMPT_CARDS.md). Demo script:
 - **Hackathon:** [Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good-hackathon/overview) (Kaggle × Google DeepMind, 2026).
 - **Required model use:** Gemma 4 E2B is the sole inference engine for
   translation, OCR cleanup, family extraction (voice + photo), and item
-  identification. Multimodal vision + structured-JSON output + native function
-  calling all exercised.
+  identification. Multimodal vision and structured-JSON output are both
+  exercised. (Function-calling / tool-use is supported by LiteRT-LM but not
+  used in this app — JSON output is parsed via a defensive extractor in
+  [`JsonExtractor.kt`](app/src/main/java/com/aidflow/pro/intake/JsonExtractor.kt).)
 - **Companion artifact:** [AidFlow Pro web app](https://github.com/Cyberman-HZ/Aidflow)
   (separate repository, same maintainer).
 
