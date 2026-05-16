@@ -37,6 +37,9 @@ class ModelSetupViewModel(private val app: AidFlowApp) : ViewModel() {
 
     fun setAllowMetered(allow: Boolean) { _allowMetered.value = allow }
 
+    /** True when the model file is already on disk from a previous run. */
+    fun isModelOnDisk(): Boolean = app.modelDownloader.isReady()
+
     fun start() {
         viewModelScope.launch {
             if (!app.modelDownloader.isReady()) {

@@ -49,6 +49,7 @@ class Gemma4Manager(private val context: Context) {
     suspend fun initialize(modelFile: File) = withContext(Dispatchers.IO) {
         if (_state.value == State.Loading || _state.value == State.Ready) return@withContext
         _state.value = State.Loading
+        val tStart = System.currentTimeMillis()
         try {
             require(modelFile.exists() && modelFile.length() > 0) {
                 "Model file missing or empty: ${modelFile.absolutePath}"
@@ -56,30 +57,55 @@ class Gemma4Manager(private val context: Context) {
             Log.i(TAG, "Initializing Gemma 4 from ${modelFile.absolutePath} (${modelFile.length() / 1024 / 1024} MB)")
 
             val cacheDir = File(context.cacheDir, "gemma").apply { mkdirs() }
+            val threads = inferenceThreadCount()
+            Log.i(TAG, "Using $threads CPU threads (device has ${Runtime.getRuntime().availableProcessors()} cores). Cache: ${cacheDir.absolutePath}")
 
             val config = EngineConfig(
                 modelPath = modelFile.absolutePath,
-                backend = Backend.CPU(),
-                visionBackend = Backend.CPU(),
-                audioBackend = Backend.CPU(),
+                backend = Backend.CPU(threads),
+                visionBackend = Backend.CPU(threads),
+                audioBackend = Backend.CPU(threads),
                 maxNumTokens = 2048,
                 maxNumImages = 1,
                 cacheDir = cacheDir.absolutePath,
             )
 
+            val tCfg = System.currentTimeMillis()
             val eng = Engine(config)
-            Log.i(TAG, "Engine constructed; calling initialize()…")
+            Log.i(TAG, "Engine constructed in ${tCfg - tStart}ms; calling initialize()…")
+            val tEngineCtor = System.currentTimeMillis()
             eng.initialize()
-            Log.i(TAG, "Engine initialized; opening conversation…")
+            val tInit = System.currentTimeMillis()
+            Log.i(TAG, "Engine.initialize() returned after ${tInit - tEngineCtor}ms; opening conversation…")
             engine = eng
             conversation = eng.createConversation()
-            Log.i(TAG, "Gemma 4 ready")
+            val tConv = System.currentTimeMillis()
+            Log.i(TAG, "Gemma 4 ready. Total init: ${tConv - tStart}ms " +
+                "(config+ctor=${tCfg - tStart}ms, initialize=${tInit - tEngineCtor}ms, conversation=${tConv - tInit}ms)")
             _state.value = State.Ready
         } catch (t: Throwable) {
-            Log.e(TAG, "Gemma 4 init failed", t)
+            Log.e(TAG, "Gemma 4 init failed after ${System.currentTimeMillis() - tStart}ms", t)
             lastError = t
             _state.value = State.Error
             safeClose()
+        }
+    }
+
+    /**
+     * Choose a sensible CPU thread count for Gemma inference.
+     *
+     * LiteRT-LM benchmarks were published with 4 threads on Tensor / Snapdragon
+     * flagships and that's a good sweet spot — fewer threads underutilizes the
+     * Cortex-A715 / X3 big cores, more threads contends with the little cores
+     * and the rest of the app. On unusually small chips we fall back to half
+     * the cores (min 2).
+     */
+    private fun inferenceThreadCount(): Int {
+        val cores = Runtime.getRuntime().availableProcessors()
+        return when {
+            cores >= 6 -> 4
+            cores >= 4 -> cores - 1
+            else -> 2
         }
     }
 

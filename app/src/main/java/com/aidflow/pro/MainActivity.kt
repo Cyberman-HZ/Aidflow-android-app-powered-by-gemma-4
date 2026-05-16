@@ -47,9 +47,14 @@ private object Routes {
 @Composable
 private fun AidFlowNavGraph(initialModelReady: Boolean) {
     val nav = rememberNavController()
-    val start = if (initialModelReady) Routes.Home else Routes.Setup
+    // We ALWAYS start on Setup. Even when the model is already downloaded, the
+    // engine still needs to be initialized in this process — otherwise every
+    // feature on Home would throw "Gemma 4 not initialized." The setup screen
+    // handles both phases (download + engine load) and jumps to Home when both
+    // are Ready, so warm restarts pass through in a few seconds.
+    @Suppress("UNUSED_PARAMETER") val unused = initialModelReady
 
-    NavHost(navController = nav, startDestination = start) {
+    NavHost(navController = nav, startDestination = Routes.Setup) {
         composable(Routes.Setup) {
             ModelSetupScreen(onReady = {
                 nav.navigate(Routes.Home) {

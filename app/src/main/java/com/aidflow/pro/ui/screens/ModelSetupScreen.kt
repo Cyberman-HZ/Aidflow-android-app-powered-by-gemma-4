@@ -21,6 +21,18 @@ fun ModelSetupScreen(onReady: () -> Unit) {
     val allowMetered by vm.allowMetered.collectAsState()
     var hasStarted by rememberSaveable { mutableStateOf(false) }
 
+    // Auto-start on entry: if the model was already downloaded in a previous session
+    // this is a fast no-op of the download phase and just kicks off engine init.
+    // For a first install it still requires the user to tap "Download model" to
+    // accept the ~3 GB transfer over their data plan, so we only auto-start when
+    // we already have the bits on disk.
+    LaunchedEffect(Unit) {
+        if (vm.isModelOnDisk() && !hasStarted) {
+            hasStarted = true
+            vm.start()
+        }
+    }
+
     LaunchedEffect(state) {
         if (state is ModelSetupViewModel.SetupState.Ready) onReady()
     }
