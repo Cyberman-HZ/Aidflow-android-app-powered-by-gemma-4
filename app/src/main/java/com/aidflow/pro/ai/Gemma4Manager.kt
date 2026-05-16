@@ -106,6 +106,18 @@ class Gemma4Manager(private val context: Context) {
             }
         }
 
+    /** Run the family-from-text prompt and return Gemma's raw JSON output. */
+    suspend fun extractFamilyFromText(description: String): String =
+        send(Prompts.familyFromText(description)).trim()
+
+    /** Run the family-from-photo prompt against a paper-form image. */
+    suspend fun extractFamilyFromImage(imageFile: File): String =
+        describeImage(imageFile, Prompts.familyFromImagePrompt())
+
+    /** Run the items-identification prompt against a supply photo. */
+    suspend fun identifyItemsInImage(imageFile: File): String =
+        describeImage(imageFile, Prompts.identifyItemsPrompt())
+
     /** Resets the conversation, clearing the KV cache so prior context doesn't leak. */
     suspend fun reset() = mutex.withLock {
         val eng = engine ?: return@withLock

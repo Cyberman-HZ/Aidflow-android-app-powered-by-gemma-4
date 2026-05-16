@@ -12,7 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.aidflow.pro.ui.screens.FamilyIntakeScreen
 import com.aidflow.pro.ui.screens.HomeScreen
+import com.aidflow.pro.ui.screens.ItemsScreen
 import com.aidflow.pro.ui.screens.ModelSetupScreen
 import com.aidflow.pro.ui.screens.ScanScreen
 import com.aidflow.pro.ui.screens.TranslateScreen
@@ -38,6 +40,8 @@ private object Routes {
     const val Home = "home"
     const val Scan = "scan"
     const val Translate = "translate"
+    const val FamilyIntake = "intake/family"
+    const val Items = "intake/items"
 }
 
 @Composable
@@ -57,9 +61,13 @@ private fun AidFlowNavGraph(initialModelReady: Boolean) {
             HomeScreen(
                 onScan = { nav.navigate(Routes.Scan) },
                 onTranslate = { nav.navigate(Routes.Translate) },
+                onFamilyIntake = { nav.navigate(Routes.FamilyIntake) },
+                onIdentifyItems = { nav.navigate(Routes.Items) },
             )
         }
         composable(Routes.Scan) { ScanScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.Translate) { TranslateScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.FamilyIntake) { FamilyIntakeScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.Items) { ItemsScreen(onBack = { nav.popBackStack() }) }
     }
 }

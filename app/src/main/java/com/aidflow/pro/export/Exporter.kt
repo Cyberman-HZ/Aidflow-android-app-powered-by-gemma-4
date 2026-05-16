@@ -98,6 +98,9 @@ class Exporter(private val context: Context) {
             ExportFormat.Csv -> CsvExporter.write(out, doc, scope)
             ExportFormat.Pdf -> PdfExporter.write(out, doc, scope)
             ExportFormat.Docx -> DocxExporter.write(out, doc, scope)
+            // The translate/scan flow doesn't expose XLSX — that lives in IntakeExporter
+            // because spreadsheets only make sense for tabular intake / inventory data.
+            ExportFormat.Xlsx -> error("Use IntakeExporter for XLSX exports")
         }
     }
 

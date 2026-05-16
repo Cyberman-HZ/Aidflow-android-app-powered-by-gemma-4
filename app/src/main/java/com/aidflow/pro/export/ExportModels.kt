@@ -5,7 +5,8 @@ enum class ExportFormat(val mime: String, val extension: String) {
     Txt("text/plain", "txt"),
     Csv("text/csv", "csv"),
     Pdf("application/pdf", "pdf"),
-    Docx("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx");
+    Docx("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"),
+    Xlsx("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx");
 }
 
 /** Which side of the document the user wants in the export. */

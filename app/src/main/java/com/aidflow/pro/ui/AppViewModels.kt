@@ -19,6 +19,8 @@ object AppViewModelFactory {
         initializer { ModelSetupViewModel(app) }
         initializer { ScanViewModel(app, Exporter(app)) }
         initializer { TranslateViewModel(app) }
+        initializer { FamilyIntakeViewModel(app) }
+        initializer { ItemsViewModel(app) }
     }
 }
 

@@ -3,6 +3,7 @@ package com.aidflow.pro
 import android.app.Application
 import com.aidflow.pro.ai.Gemma4Manager
 import com.aidflow.pro.ai.ModelDownloader
+import com.aidflow.pro.export.IntakeExporter
 import com.aidflow.pro.ocr.OcrEngine
 import com.aidflow.pro.translate.TranslationRepository
 
@@ -20,6 +21,7 @@ class AidFlowApp : Application() {
     val modelDownloader: ModelDownloader by lazy { ModelDownloader(this) }
     val ocr: OcrEngine by lazy { OcrEngine() }
     val translation: TranslationRepository by lazy { TranslationRepository(gemma) }
+    val intakeExporter: IntakeExporter by lazy { IntakeExporter(this) }
 
     override fun onTerminate() {
         super.onTerminate()
