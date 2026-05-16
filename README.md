@@ -70,21 +70,49 @@ The two apps share a name on purpose — they are halves of the same system.
 
 ## Screenshots
 
-| | |
-|---|---|
-| ![Home](docs/screenshots/01-home.png) | ![Family Intake](docs/screenshots/02-family-intake.png) |
-| Home — four feature cards | Family intake by voice |
-| ![Family extracted](docs/screenshots/03-family-extracted.png) | ![Family captured](docs/screenshots/04-family-captured.png) |
-| Extracted family with priority score | Captured-session list ready to export |
-| ![Items](docs/screenshots/05-items.png) | ![Scan translated](docs/screenshots/06-scan-translated.png) |
-| Identify items from a photo | Translate a paper document |
-| ![Translate voice](docs/screenshots/07-translate-voice.png) | ![Export sheet](docs/screenshots/08-export-sheet.png) |
-| Real-time voice translation | Export — pick scope and format |
-| ![Document scanner](docs/screenshots/09-doc-scanner.png) | ![Model setup](docs/screenshots/10-setup.png) |
-| Built-in document scanner | One-time on-device setup |
+### The headline demo: paper form → Gemma 4 → structured record
 
-(Add screenshots under [`docs/screenshots/`](docs/screenshots/) — see the
-[guide](docs/screenshots/README.md) for filenames.)
+A handwritten paper registration form is photographed with the in-app
+document scanner (auto-cropped + perspective-corrected by Google's on-device
+model). Gemma 4 reads it and emits a structured family record matching the
+AidFlow web app's exact schema — name, member counts, medical condition,
+displacement status, all populated and editable.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/09-doc-scanner.png" alt="Document scanner over a handwritten registration sheet" width="320"/></td>
+    <td><img src="docs/screenshots/03-family-extracted.png" alt="Extracted family record ready for review" width="320"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>1. Capture</b> — handwritten form, in-app scanner</td>
+    <td align="center"><b>2. Extract</b> — Gemma 4 fills the canonical web-app fields</td>
+  </tr>
+</table>
+
+### The rest of the app
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/01-home.png" alt="Home screen with four feature cards" width="320"/></td>
+    <td><img src="docs/screenshots/02-family-intake-speak.png" alt="Family intake by voice" width="320"/></td>
+  </tr>
+  <tr>
+    <td align="center">Home — four feature cards, "100% offline" badge</td>
+    <td align="center">Family intake — speak naturally instead of typing</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/02b-family-intake-photo.png" alt="Family intake from paper form" width="320"/></td>
+    <td><img src="docs/screenshots/07-translate-voice.png" alt="Voice and text translation" width="320"/></td>
+  </tr>
+  <tr>
+    <td align="center">Family intake — scan-paper-form mode</td>
+    <td align="center">Real-time voice + text translation</td>
+  </tr>
+</table>
+
+More screenshots welcome under [`docs/screenshots/`](docs/screenshots/) — see
+the [guide](docs/screenshots/README.md) for suggested filenames (Home,
+Identify Items, Document Scan with translation, Export sheet, etc.).
 
 ---
 
