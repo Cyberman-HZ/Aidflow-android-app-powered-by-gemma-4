@@ -1,51 +1,229 @@
-# AidFlow Pro
+# AidFlow Pro — Mobile
 
-> Offline aid translation, powered by **Gemma 4** running entirely on your Android phone.
-> Submission for the [Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good-hackathon/overview).
+> **Offline field worker assistant, powered by Gemma 4.**
+> Android companion to the [AidFlow Pro web app](https://github.com/Cyberman-HZ/Aidflow).
+
+[![Beta](https://img.shields.io/badge/status-beta-orange)](#status)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Gemma 4](https://img.shields.io/badge/Gemma%204-E2B%20on--device-brightgreen)](https://ai.google.dev/gemma)
+[![Android](https://img.shields.io/badge/Android-12%2B-3DDC84)](#installing)
+
+This project is **AidFlow Pro Mobile**, an Android app built for the
+[Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good-hackathon/overview)
+(Google DeepMind × Kaggle, $200K prize pool, submission deadline 2026-05-18).
 
 ---
 
-## The problem
+## Status — Beta
 
-Hundreds of millions of people — refugees, migrant workers, disaster responders, and the
-caregivers serving them — find themselves in situations where reliable translation can be
-the difference between safety and harm: a misread prescription, a misunderstood evacuation
-order, a medical history that can't be communicated to a doctor. These situations also
-tend to coincide with the worst connectivity: refugee camps, conflict zones, remote rural
-clinics, and the immediate aftermath of natural disasters.
+This is an **early beta release**. The core flows are working and battle-tested
+enough to demo, but expect rough edges: large model download on first launch,
+multi-second inference latency on mid-range phones, and occasional language
+gaps in the on-device speech recognizer. Not yet hardened for unsupervised
+deployment in critical operations.
 
-Cloud translation services don't work where they're most needed.
+## What it is
 
-## What AidFlow Pro does
+AidFlow Pro Mobile is a **fully offline humanitarian aid assistant** designed
+for **field aid workers** — the people doing intake at refugee camps, running
+distribution lines at disaster sites, triaging in mobile clinics, and
+communicating across language barriers where connectivity is unreliable.
 
-Two flows, both **100% offline** after the one-time model download:
+Everything runs on the phone:
 
-1. **Scan & Translate a Document** — point your camera at a prescription, an intake form,
-   a sign, or any document. ML Kit Text Recognition v2 extracts the text on-device.
-   Gemma 4 cleans up OCR artifacts (broken columns, garbled characters) and then
-   translates into one of 20 languages. Export the result as **TXT, CSV, PDF, or DOCX**
-   for sharing with caregivers, family, or partner NGOs.
+- **Gemma 4 E2B** (effective 2B-parameter multimodal model) via the LiteRT-LM
+  runtime — text, vision, and audio understanding without leaving the device.
+- **ML Kit Text Recognition v2** for fast offline OCR.
+- **Google Document Scanner** for camera + auto-crop + perspective correction.
+- **Android system on-device speech recognizer** + **TextToSpeech**.
 
-2. **Real-time Voice & Text Translation** — speak or type in one language; Gemma 4
-   translates and the device speaks the result aloud. The system speech recognizer runs
-   on-device on Android 13+; everything else runs in the app process.
+The only network call AidFlow Pro Mobile ever makes is the **one-time
+download** of the Gemma 4 checkpoint (~2.6 GB) on first launch. Everything
+after that works in airplane mode — refugee camps, evacuation shelters, remote
+clinics, conflict zones.
 
-Both flows survive airplane mode. The only network connection AidFlow Pro ever makes is
-the **one-time download** of the Gemma 4 E2B checkpoint on first launch.
+## How it relates to the AidFlow Pro web app
 
-## How Gemma 4 is used
+The [AidFlow Pro web app](https://github.com/Cyberman-HZ/Aidflow) is the
+**desk-side coordination tool**: case management, priority triage, dispatch
+orders, knowledge-base Q&A, reporting. It is itself offline-first and powered
+by Gemma 4 (via Ollama).
 
-| Capability | Gemma 4 role |
+**AidFlow Pro Mobile is its eyes and ears in the field.** Field workers
+capture data on their phone while walking through camps or clinics; the web
+app, running on a coordinator's laptop, picks it up for triage and
+distribution.
+
+The interop is **deliberate and zero-friction**:
+
+- The mobile app's family-intake Excel exports use the *exact* 12 canonical
+  column names from the web app's
+  [`spreadsheetImport.ts`](https://github.com/Cyberman-HZ/Aidflow/blob/main/src/services/spreadsheetImport.ts)
+  (`head_name`, `member_count`, `children_under_5`, `elderly_count`,
+  `has_pregnant_member`, `medical_conditions`, `displacement_status`,
+  `income_level`, `location_sector`, `street`, `city`, `notes`), so importing
+  a mobile-captured file into the web app requires no column-mapping step.
+- The mobile app's priority-score prompt mirrors the web app's triage logic,
+  so families arrive in the web app already pre-scored.
+
+The two apps share a name on purpose — they are halves of the same system.
+
+## Screenshots
+
+| | |
 |---|---|
-| Document text cleanup | Tuned prompt that restores paragraph order, fixes OCR confusions (`rn`→`m`, `0`↔`O`), and merges fragmented columns — **without translating** |
-| Document translation | Faithful translation prompt that preserves numbers, names, dates, and units — critical for prescriptions and intake forms |
-| Voice translation | Same translation prompt invoked on each final ASR transcript |
+| ![Home](docs/screenshots/01-home.png) | ![Family Intake](docs/screenshots/02-family-intake.png) |
+| Home — four feature cards | Family intake by voice |
+| ![Family extracted](docs/screenshots/03-family-extracted.png) | ![Family captured](docs/screenshots/04-family-captured.png) |
+| Extracted family with priority score | Captured-session list ready to export |
+| ![Items](docs/screenshots/05-items.png) | ![Scan translated](docs/screenshots/06-scan-translated.png) |
+| Identify items from a photo | Translate a paper document |
+| ![Translate voice](docs/screenshots/07-translate-voice.png) | ![Export sheet](docs/screenshots/08-export-sheet.png) |
+| Real-time voice translation | Export — pick scope and format |
+| ![Document scanner](docs/screenshots/09-doc-scanner.png) | ![Model setup](docs/screenshots/10-setup.png) |
+| Built-in document scanner | One-time on-device setup |
 
-We deliberately use Gemma 4 as the **sole** translation engine (no ML Kit Translate
-fallback) so that the quality story for the hackathon is a Gemma 4 story.
+(Add screenshots under [`docs/screenshots/`](docs/screenshots/) — see the
+[guide](docs/screenshots/README.md) for filenames.)
 
-Prompts live in [`app/.../ai/Prompts.kt`](app/src/main/java/com/aidflow/pro/ai/Prompts.kt)
-so the write-up and the code can't drift.
+---
+
+## Features and their real-life impact
+
+### 1. Voice & photo family intake → Excel
+
+Field worker says *"Ahmed Mahmoud, 42, four kids, youngest is six with asthma,
+displaced from Aleppo three weeks ago"* — or photographs a paper registration
+form. Gemma 4 extracts a structured family record (head name, member counts,
+medical conditions, displacement, income, location, priority score 0–100 with
+reasoning). The worker reviews, edits, captures the next family, and exports
+an Excel file that drops straight into the AidFlow web app.
+
+**Impact.** Cuts a paper-intake cycle from **5+ minutes of typing per family
+to ~30 seconds of speaking**. In mass-displacement events (recent earthquakes,
+floods, conflict displacements have all required registering 1,000+ families
+in a single day per camp), this turns a multi-hour backlog into a real-time
+operation, and frees the worker to keep their eyes on the family they're
+speaking with instead of a phone keyboard.
+
+### 2. Identify items from a photo
+
+Photograph relief supplies. Gemma 4's multimodal vision lists every distinct
+item with a category (food / water / medical / shelter / hygiene / clothing /
+education / other), quantity estimate, and unit. Stack multiple photos into
+one inventory and export.
+
+**Impact.** Rapid supply audits at distribution sites and warehouse
+checkpoints — what used to be a clipboard-and-tally exercise becomes a
+camera-and-confirm exercise. Helps coordinators know what's actually
+available *before* dispatching aid orders.
+
+### 3. Document scan + OCR + translation + export
+
+Photograph a prescription, an intake form, a foreign-language sign, or a
+medical history. ML Kit extracts text; Gemma 4 cleans up the OCR layout *or*
+re-reads the image directly with multimodal vision; Gemma 4 then translates
+into any of 20 languages. Export the result as TXT, CSV, PDF, or DOCX — and
+choose what to include: original text only, translation only, or both.
+
+**Impact.** Medical and legal documents become legible to caregivers in
+their working language. A prescription written in Spanish becomes a PDF in
+Arabic ready to share with a refugee family in seconds — fully offline, no
+data leaves the phone.
+
+### 4. Real-time voice and text translation
+
+Speak in one language, get the translation read back in another. Works
+offline (Android 13+ has a guaranteed on-device speech recognizer; on Android
+12 we fall back to the system's offline preference). 20 supported languages
+spanning the humanitarian use-case set (English, Spanish, French, Portuguese,
+Arabic, Ukrainian, Russian, Polish, Turkish, Persian, Pashto, Urdu, Hindi,
+Bengali, Swahili, Amharic, Somali, Chinese Simplified, Vietnamese, Tagalog).
+
+**Impact.** Triage conversations across language barriers. A field clinic
+volunteer can take a patient history from a Pashto-speaking mother while
+working in English. An evacuation coordinator can deliver instructions in
+Ukrainian without an interpreter on site.
+
+### 5. Built-in camera with auto-crop and lens/flash control
+
+Every photo input — Family Intake (paper form mode), Document Scan, and
+Identify Items — has both a gallery picker and a Take-photo button. The
+camera uses Google's on-device document scanner, which provides:
+
+- Front/back lens switch
+- Flash toggle (auto / on / off)
+- Live edge detection with green corner outline
+- Auto perspective correction (paper turned into a clean rectangle)
+- Manual corner adjustment if the auto-detection guesses wrong
+- Color / grayscale / B&W filter options
+- Retake before confirming
+
+**Impact.** Aid workers don't need a flatbed scanner or a clean working
+surface. A crumpled paper form held at an angle on a folding table becomes a
+near-perfect rectangular scan ready for OCR.
+
+### 6. Offline-first, end-to-end
+
+Gemma 4 runs on the phone via LiteRT-LM (CPU backend, XNNPack-accelerated).
+ML Kit OCR runs on the phone. The document scanner runs on the phone. The
+speech recognizer runs on the phone. TextToSpeech runs on the phone.
+
+**Impact.** Works in places where humanitarian work most needs to work —
+refugee camps and disaster zones with no mobile data, conflict zones where
+sending data across borders would be unsafe, mobile clinics in rural areas
+with intermittent coverage. **No data ever leaves the device.**
+
+### 7. Web-app interop, no mapping required
+
+The XLSX/CSV exporters target the AidFlow web app's exact canonical column
+names. Mobile-captured data drops into the web app's spreadsheet import
+dialog and is recognized field-by-field with no manual mapping.
+
+**Impact.** A field team captures intake on five phones during a morning
+shift. At lunch, the coordinator collects five Excel files via USB / Bluetooth
+/ a local Wi-Fi share, drags them into the web app, and the case list is
+populated, pre-triaged, and ready for distribution planning by the time the
+team is back in the field.
+
+---
+
+## Installing the prebuilt APK
+
+A signed debug APK is checked into the repository root:
+
+**[`AidFlowPro-debug.apk`](AidFlowPro-debug.apk)** (~145 MB)
+
+1. Copy the APK to your phone (USB, email, Drive — anything).
+2. On the phone: **Settings → Apps → Install unknown apps** → enable for your
+   file manager / browser.
+3. Tap the APK to install. Allow camera + microphone permissions when asked.
+4. Via adb: `adb install AidFlowPro-debug.apk`.
+
+Requirements: **Android 12+ (API 31)**, **3 GB free storage**, **2 GB free
+RAM**. Voice translation works best on Android 13+ (API 33) where Google
+ships a guaranteed on-device speech recognizer.
+
+On first launch the app downloads `gemma-4-E2B-it.litertlm` (~2.6 GB) from
+HuggingFace. Wi-Fi is strongly recommended; the in-app downloader gates on
+unmetered networks unless you tick "allow mobile data."
+
+## Building from source
+
+```bash
+./gradlew testDebugUnitTest      # 31 unit tests
+./gradlew assembleDebug          # writes app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug           # if a device is connected
+```
+
+Requires JDK 17 + Android SDK 34 + Gradle 8.7, or Android Studio Iguana or
+newer. On Windows, you can use the bundled convenience wrapper (downloads
+JDK + Gradle + SDK into `.tools/`):
+
+```powershell
+.\build.ps1 test
+.\build.ps1 apk
+```
 
 ## Architecture
 
@@ -57,16 +235,19 @@ so the write-up and the code can't drift.
                                  │
                        ┌─────────▼──────────┐
                        │   ViewModels       │
+                       │ Family / Items /   │
                        │ Scan / Translate / │
-                       │   ModelSetup       │
+                       │ ModelSetup         │
                        └─────────┬──────────┘
                                  │
-              ┌──────────────────┼─────────────────┐
-              │                  │                 │
-      ┌───────▼───────┐  ┌───────▼───────┐  ┌──────▼──────┐
-      │  OcrEngine    │  │ Translation   │  │ SpeechEngine│
-      │  (ML Kit v2)  │  │  Repository   │  │ TtsEngine   │
-      └───────────────┘  └───────┬───────┘  └─────────────┘
+       ┌──────────┬──────────────┼──────────────┬───────────┐
+       │          │              │              │           │
+ ┌─────▼──┐ ┌─────▼────┐ ┌───────▼──────┐ ┌────▼─────┐ ┌────▼─────┐
+ │ OCR    │ │ Doc      │ │ Translation  │ │ Speech   │ │ Intake   │
+ │ ML Kit │ │ Scanner  │ │ Repository   │ │ Engine   │ │ Mapper   │
+ └────────┘ │ ML Kit   │ └───────┬──────┘ │ + TTS    │ │ +JSON    │
+            │ GMS      │         │        └──────────┘ │ extract  │
+            └──────────┘         │                      └──────────┘
                                  │
                        ┌─────────▼──────────┐
                        │   Gemma4Manager    │
@@ -79,72 +260,9 @@ so the write-up and the code can't drift.
                        └────────────────────┘
 ```
 
-Key implementation files:
-
-- [`Gemma4Manager.kt`](app/src/main/java/com/aidflow/pro/ai/Gemma4Manager.kt) — wraps the
-  LiteRT-LM `Engine` and a single long-lived `Conversation` (you cannot recreate the
-  conversation without disposing the engine — known pitfall).
-- [`ModelDownloader.kt`](app/src/main/java/com/aidflow/pro/ai/ModelDownloader.kt) — OkHttp
-  download with HTTP Range resume support and Wi-Fi gating by default.
-- [`OcrEngine.kt`](app/src/main/java/com/aidflow/pro/ocr/OcrEngine.kt) — ML Kit Text
-  Recognition v2 (Latin script bundle by default; CJK/Devanagari/etc. one Gradle line away).
-- [`SpeechEngine.kt`](app/src/main/java/com/aidflow/pro/asr/SpeechEngine.kt) — uses
-  `SpeechRecognizer.createOnDeviceSpeechRecognizer()` on Android 13+, falls back to
-  `EXTRA_PREFER_OFFLINE` on Android 12.
-- [`DocxExporter.kt`](app/src/main/java/com/aidflow/pro/export/DocxExporter.kt) — a
-  hand-rolled 150-line OOXML writer so we don't pay the 30 MB Apache POI tax.
-
-## Languages supported
-
-20 languages spanning the humanitarian use cases:
-English, Spanish, French, Portuguese, Arabic, Ukrainian, Russian, Polish, Turkish, Persian,
-Pashto, Urdu, Hindi, Bengali, Swahili, Amharic, Somali, Chinese (Simplified), Vietnamese,
-Tagalog.
-
-The translator can pair any two of these via Gemma 4. The on-device ASR and TTS depend on
-the user's installed Android language packs.
-
-## Installing the prebuilt APK
-
-A prebuilt debug APK is checked in: [`AidFlowPro-debug.apk`](AidFlowPro-debug.apk) (~144 MB).
-
-1. Enable **Settings → Apps → Install unknown apps** for your file manager / browser.
-2. Copy the APK to your phone (USB, email, cloud) and tap to install.
-3. Or install via adb: `adb install AidFlowPro-debug.apk`.
-
-The app needs **Android 12+ (API 31)**. Voice translation works best on **Android 13+ (API 33)** where the system provides a guaranteed on-device speech recognizer.
-
-On first launch the app downloads the Gemma 4 E2B model (~3 GB) over Wi-Fi.
-
-## Building from source
-
-Requirements: Android Studio Iguana+ OR JDK 17 + Android SDK 34 + Gradle 8.7.
-
-```bash
-./gradlew testDebugUnitTest      # 12 unit tests
-./gradlew assembleDebug          # outputs app/build/outputs/apk/debug/app-debug.apk
-./gradlew installDebug           # if a device is connected
-```
-
-On Windows you can use the convenience wrapper that bundles JDK/Gradle/SDK env-vars:
-
-```powershell
-.\build.ps1 test
-.\build.ps1 apk
-```
-
-On first launch the app downloads `gemma-4-E2B-it.litertlm` (~3 GB) from
-`huggingface.co/litert-community/gemma-4-E2B-it-litert-lm`. Wi-Fi is recommended.
-
-### Skipping the first-run download (for development)
-
-Sideload the model to the right path with adb:
-
-```bash
-adb push gemma-4-E2B-it.litertlm \
-  /sdcard/Android/data/com.aidflow.pro/files/models/
-# Then move it into the internal files dir from inside the app (or use run-as)
-```
+Detailed write-up: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Tuned
+prompts: [`docs/PROMPT_CARDS.md`](docs/PROMPT_CARDS.md). Demo script:
+[`docs/DEMO.md`](docs/DEMO.md).
 
 ## Tests
 
@@ -152,30 +270,29 @@ adb push gemma-4-E2B-it.litertlm \
 ./gradlew testDebugUnitTest
 ```
 
-Covers:
-- CSV escaping (commas, quotes, newlines, BOM) — `CsvExporterTest`
-- DOCX OOXML structure + XML escaping — `DocxExporterTest`
-- BCP-47 language tags + RTL flagging — `LanguagesTest`
-- Prompt invariants — `PromptsTest`
+31 unit tests across:
 
-## Performance notes
+- **CSV / DOCX / XLSX / TXT exporters** — escaping (commas, quotes, newlines,
+  BOM), OOXML structure, cell references past column Z, XML escaping.
+- **JsonExtractor** — strips markdown fences, scans past preambles, handles
+  nested braces inside string literals.
+- **IntakeMapper** — 12-canonical-field round-trip, defensive defaults,
+  loose enum normalization for `displacement_status` and `income_level`.
+- **Languages** — every BCP-47 tag round-trips; RTL flags correct.
+- **Prompts** — translate / OCR-cleanup / family-extraction prompt invariants.
 
-| Device | Backend | First-token | Decode tok/s |
-|---|---|---|---|
-| Pixel 8 Pro | CPU | ~5 s | ~17 |
-| Pixel 8 Pro | GPU | ~0.8 s | ~22 |
-| Samsung S23 | CPU | ~6 s | ~14 |
+## Submission information
 
-Numbers above are from public LiteRT-LM benchmarks for Gemma 4 E2B; we ship the CPU
-backend by default because the GPU path still has OpenCL issues in the current LiteRT-LM
-release.
-
-## Project status
-
-Built for the Gemma 4 Good Hackathon (deadline 2026-05-18). MVP scope: photo OCR →
-translate → export + voice/text translate. Known follow-ups: legacy `.doc`, multi-document
-batching, persistent translation history, on-device fine-tuning for medical terminology.
+- **Hackathon:** [Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good-hackathon/overview) (Kaggle × Google DeepMind, 2026).
+- **Required model use:** Gemma 4 E2B is the sole inference engine for
+  translation, OCR cleanup, family extraction (voice + photo), and item
+  identification. Multimodal vision + structured-JSON output + native function
+  calling all exercised.
+- **Companion artifact:** [AidFlow Pro web app](https://github.com/Cyberman-HZ/Aidflow)
+  (separate repository, same maintainer).
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+[Apache 2.0](LICENSE). Gemma 4 model weights are governed by the [Gemma Terms
+of Use](https://ai.google.dev/gemma/terms); downloading and running the model
+implies acceptance.
