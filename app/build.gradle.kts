@@ -88,6 +88,9 @@ dependencies {
 
     // ML Kit OCR (Latin script — extend as needed)
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // Google's document scanner — provides the in-app camera UI with lens switch,
+    // flash toggle, on-device edge detection, perspective correction, and filters.
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
     // Optional script bundles — uncomment to add at +260KB each
     // implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     // implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")

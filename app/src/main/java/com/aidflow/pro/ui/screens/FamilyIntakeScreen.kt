@@ -32,7 +32,8 @@ import com.aidflow.pro.ui.FamilyIntakeViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
 import com.aidflow.pro.ui.components.PhotoSourceRow
-import com.aidflow.pro.ui.components.rememberCameraCapture
+import com.aidflow.pro.ui.components.rememberDocumentScanner
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -50,7 +51,10 @@ fun FamilyIntakeScreen(onBack: () -> Unit) {
     val pickImage = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) vm.setImage(uri) }
-    val captureImage = rememberCameraCapture { uri -> vm.setImage(uri) }
+    val captureImage = rememberDocumentScanner(
+        scannerMode = GmsDocumentScannerOptions.SCANNER_MODE_FULL,
+        onCaptured = { uri -> vm.setImage(uri) },
+    )
 
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); vm.clearError() }

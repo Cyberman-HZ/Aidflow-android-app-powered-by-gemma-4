@@ -1,9 +1,12 @@
 package com.aidflow.pro.ui.components
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -28,6 +31,9 @@ import androidx.core.content.FileProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.File
 
 /**
@@ -87,6 +93,80 @@ private fun launchCamera(
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     onUriCreated(uri)
     launcher.launch(uri)
+}
+
+/**
+ * Camera + auto-crop capture via Google's on-device document scanner.
+ *
+ * Compared to the bare-bones [rememberCameraCapture]:
+ *   • Lens-switch button (front/back) in the scanner UI.
+ *   • Flash toggle (auto / on / off).
+ *   • Live edge detection that highlights the document/subject.
+ *   • Auto-cropping + perspective correction (FULL mode) or raw capture (BASE mode).
+ *   • Manual corner adjustment if the auto-detection guess is wrong.
+ *   • Color / grayscale / B&W filter options before confirming.
+ *
+ * Mode guidance:
+ *   • [GmsDocumentScannerOptions.SCANNER_MODE_FULL] — paper forms and documents.
+ *     Auto-crops the detected page and warps to a clean rectangle.
+ *   • [GmsDocumentScannerOptions.SCANNER_MODE_BASE] — anything that isn't a
+ *     document (e.g. supply photos). Provides camera UI without forcing a crop.
+ *
+ * Returns a callable that opens the scanner. Callbacks deliver a `content://`
+ * URI living in Google Play services' temporary storage; ML Kit / Coil /
+ * ContentResolver can read it as-is (Google grants temporary read permission).
+ *
+ * Requires Google Play services. On a device without GMS, callers should fall
+ * back to [rememberCameraCapture] (the system camera intent path).
+ */
+@Composable
+fun rememberDocumentScanner(
+    onCaptured: (Uri) -> Unit,
+    scannerMode: Int = GmsDocumentScannerOptions.SCANNER_MODE_FULL,
+    onError: (String) -> Unit = { Log.w("PhotoSource", "Doc scanner: $it") },
+): () -> Unit {
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
+            val uri = scanResult?.pages?.firstOrNull()?.imageUri
+            if (uri != null) onCaptured(uri) else onError("Scanner returned no pages")
+        }
+        // resultCode == RESULT_CANCELED is a normal user-cancel; no error
+    }
+
+    return remember(launcher, activity, scannerMode) {
+        {
+            if (activity == null) {
+                onError("No Activity host for the document scanner")
+            } else {
+                val options = GmsDocumentScannerOptions.Builder()
+                    .setGalleryImportAllowed(false)
+                    .setPageLimit(1)
+                    .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+                    .setScannerMode(scannerMode)
+                    .build()
+                GmsDocumentScanning.getClient(options)
+                    .getStartScanIntent(activity)
+                    .addOnSuccessListener { intentSender ->
+                        launcher.launch(IntentSenderRequest.Builder(intentSender).build())
+                    }
+                    .addOnFailureListener { t ->
+                        onError(t.message ?: "Couldn't start the document scanner")
+                    }
+            }
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /**

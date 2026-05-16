@@ -26,7 +26,8 @@ import com.aidflow.pro.ui.ItemsViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
 import com.aidflow.pro.ui.components.PhotoSourceRow
-import com.aidflow.pro.ui.components.rememberCameraCapture
+import com.aidflow.pro.ui.components.rememberDocumentScanner
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,10 +46,15 @@ fun ItemsScreen(onBack: () -> Unit) {
             vm.identify(context)
         }
     }
-    val captureImage = rememberCameraCapture { uri ->
-        vm.setImage(uri)
-        vm.identify(context)
-    }
+    // Items aren't paper documents — use BASE mode so the scanner doesn't try
+    // to auto-crop a supply photo into a tight rectangle and lose context.
+    val captureImage = rememberDocumentScanner(
+        scannerMode = GmsDocumentScannerOptions.SCANNER_MODE_BASE,
+        onCaptured = { uri ->
+            vm.setImage(uri)
+            vm.identify(context)
+        },
+    )
 
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); vm.clearError() }

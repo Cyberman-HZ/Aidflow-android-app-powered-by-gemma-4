@@ -31,7 +31,8 @@ import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
 import com.aidflow.pro.ui.components.LanguagePicker
 import com.aidflow.pro.ui.components.PhotoSourceRow
-import com.aidflow.pro.ui.components.rememberCameraCapture
+import com.aidflow.pro.ui.components.rememberDocumentScanner
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,10 +51,13 @@ fun ScanScreen(onBack: () -> Unit) {
             vm.recognize(context)
         }
     }
-    val captureImage = rememberCameraCapture { uri ->
-        vm.setImage(uri)
-        vm.recognize(context)
-    }
+    val captureImage = rememberDocumentScanner(
+        scannerMode = GmsDocumentScannerOptions.SCANNER_MODE_FULL,
+        onCaptured = { uri ->
+            vm.setImage(uri)
+            vm.recognize(context)
+        },
+    )
 
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); vm.clearError() }
