@@ -26,8 +26,7 @@ import com.aidflow.pro.ui.ItemsViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
 import com.aidflow.pro.ui.components.PhotoSourceRow
-import com.aidflow.pro.ui.components.rememberDocumentScanner
-import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.aidflow.pro.ui.components.rememberCameraCapture
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,15 +45,15 @@ fun ItemsScreen(onBack: () -> Unit) {
             vm.identify(context)
         }
     }
-    // Items aren't paper documents — use BASE mode so the scanner doesn't try
-    // to auto-crop a supply photo into a tight rectangle and lose context.
-    val captureImage = rememberDocumentScanner(
-        scannerMode = GmsDocumentScannerOptions.SCANNER_MODE_BASE,
-        onCaptured = { uri ->
-            vm.setImage(uri)
-            vm.identify(context)
-        },
-    )
+    // Items aren't paper documents — bypass the document scanner entirely and
+    // use the plain system camera intent. The scanner's live edge-detection
+    // overlay made it look like the AI was trying to identify objects in the
+    // viewfinder before the photo was even taken, which is confusing UX for
+    // a supply-inventory flow.
+    val captureImage = rememberCameraCapture { uri ->
+        vm.setImage(uri)
+        vm.identify(context)
+    }
 
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); vm.clearError() }

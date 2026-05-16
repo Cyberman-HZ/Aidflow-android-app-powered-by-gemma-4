@@ -22,7 +22,12 @@ import java.io.File
  * Lifecycle wrapper around the Gemma 4 LiteRT-LM Engine.
  *
  * Known sharp edges in the runtime:
- *   • Exactly one Conversation per Engine — creating a second throws.
+ *   • At most one Conversation per Engine at a time — creating a second throws.
+ *     We close + recreate to start each independent request with a fresh
+ *     context, which prevents context accumulation across unrelated calls
+ *     (each image consumes ~256 tokens of a 2048-token window, so reusing
+ *     one Conversation across multiple item-identifications used to overflow
+ *     and leave the conversation in a broken state).
  *   • engine.initialize() blocks several seconds, must run on IO.
  *   • CPU backend is the reliable default; GPU/NPU need device-specific drivers
  *     and stall during init on phones without OpenCL/QNN. We pin all three
@@ -122,7 +127,7 @@ class Gemma4Manager(private val context: Context) {
     suspend fun describeImage(imageFile: File, ask: String = Prompts.imageDescribe()): String =
         withContext(Dispatchers.Default) {
             mutex.withLock {
-                val conv = conversation ?: error("Gemma 4 not initialized")
+                val conv = freshConversation()
                 val contents = Contents.of(
                     Content.ImageFile(imageFile.absolutePath),
                     Content.Text(ask),
@@ -165,10 +170,21 @@ class Gemma4Manager(private val context: Context) {
 
     private suspend fun send(text: String): String = withContext(Dispatchers.Default) {
         mutex.withLock {
-            val conv = conversation ?: error("Gemma 4 not initialized")
+            val conv = freshConversation()
             val reply = conv.sendMessage(text, emptyMap<String, Any>())
             extractText(reply)
         }
+    }
+
+    /**
+     * Close the current Conversation and open a new one so each request runs
+     * in an empty KV cache. Must be called while holding [mutex].
+     */
+    private fun freshConversation(): Conversation {
+        val eng = engine
+            ?: error("Gemma 4 engine is still loading — please wait a moment and try again.")
+        runCatching { conversation?.close() }
+        return eng.createConversation().also { conversation = it }
     }
 
     private fun extractText(message: Message): String =
