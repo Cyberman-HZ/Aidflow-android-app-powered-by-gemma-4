@@ -31,6 +31,8 @@ import com.aidflow.pro.intake.IncomeLevel
 import com.aidflow.pro.ui.FamilyIntakeViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
+import com.aidflow.pro.ui.components.PhotoSourceRow
+import com.aidflow.pro.ui.components.rememberCameraCapture
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -48,6 +50,7 @@ fun FamilyIntakeScreen(onBack: () -> Unit) {
     val pickImage = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) vm.setImage(uri) }
+    val captureImage = rememberCameraCapture { uri -> vm.setImage(uri) }
 
     LaunchedEffect(state.error) {
         state.error?.let { snackbar.showSnackbar(it); vm.clearError() }
@@ -117,6 +120,7 @@ fun FamilyIntakeScreen(onBack: () -> Unit) {
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
+                        onCapture = captureImage,
                     )
                 }
 
@@ -259,21 +263,23 @@ private fun TypeInput(description: String, onDescription: (String) -> Unit) {
 }
 
 @Composable
-private fun PhotoInput(hasImage: Boolean, onPick: () -> Unit) {
+private fun PhotoInput(hasImage: Boolean, onPick: () -> Unit, onCapture: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.padding(16.dp)) {
             Text(
                 if (hasImage) "Photo selected. Tap \"Extract with Gemma 4\" below."
-                else "Photograph the family's paper registration sheet.",
+                else "Photograph the family's paper registration sheet, or pick an existing photo.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            FilledTonalButton(onClick = onPick) {
-                Icon(Icons.Filled.Image, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (hasImage) "Change photo" else "Pick photo")
-            }
+            PhotoSourceRow(
+                onGalleryPick = onPick,
+                onCameraCapture = onCapture,
+                galleryLabel = if (hasImage) "Change photo" else "Pick photo",
+                cameraLabel = "Take photo",
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

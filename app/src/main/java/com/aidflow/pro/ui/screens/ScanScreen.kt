@@ -30,6 +30,8 @@ import com.aidflow.pro.ui.ScanViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
 import com.aidflow.pro.ui.components.LanguagePicker
+import com.aidflow.pro.ui.components.PhotoSourceRow
+import com.aidflow.pro.ui.components.rememberCameraCapture
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +49,10 @@ fun ScanScreen(onBack: () -> Unit) {
             vm.setImage(uri)
             vm.recognize(context)
         }
+    }
+    val captureImage = rememberCameraCapture { uri ->
+        vm.setImage(uri)
+        vm.recognize(context)
     }
 
     LaunchedEffect(state.error) {
@@ -109,20 +115,19 @@ fun ScanScreen(onBack: () -> Unit) {
                     )
                 }
 
-                FilledTonalButton(
-                    onClick = {
+                PhotoSourceRow(
+                    onGalleryPick = {
                         pickImage.launch(
                             androidx.activity.result.PickVisualMediaRequest(
                                 ActivityResultContracts.PickVisualMedia.ImageOnly,
                             ),
                         )
                     },
+                    onCameraCapture = captureImage,
+                    galleryLabel = stringResource(R.string.scan_pick_photo),
+                    cameraLabel = stringResource(R.string.scan_take_photo),
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.Image, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.scan_pick_photo))
-                }
+                )
 
                 if (state.rawText.isBlank() && !state.isRecognizing) {
                     EmptyState()

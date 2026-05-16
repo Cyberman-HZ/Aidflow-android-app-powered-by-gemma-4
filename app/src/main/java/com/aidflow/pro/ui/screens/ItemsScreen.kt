@@ -25,6 +25,8 @@ import com.aidflow.pro.intake.ItemCategory
 import com.aidflow.pro.ui.ItemsViewModel
 import com.aidflow.pro.ui.appViewModel
 import com.aidflow.pro.ui.components.BusyOverlay
+import com.aidflow.pro.ui.components.PhotoSourceRow
+import com.aidflow.pro.ui.components.rememberCameraCapture
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +44,10 @@ fun ItemsScreen(onBack: () -> Unit) {
             vm.setImage(uri)
             vm.identify(context)
         }
+    }
+    val captureImage = rememberCameraCapture { uri ->
+        vm.setImage(uri)
+        vm.identify(context)
     }
 
     LaunchedEffect(state.error) {
@@ -88,18 +94,17 @@ fun ItemsScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                FilledTonalButton(
-                    onClick = {
+                PhotoSourceRow(
+                    onGalleryPick = {
                         pickImage.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )
                     },
+                    onCameraCapture = captureImage,
+                    galleryLabel = if (state.items.isEmpty()) "Pick photo" else "Add from gallery",
+                    cameraLabel = "Take photo",
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.Image, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (state.items.isEmpty()) "Pick photo" else "Add another photo")
-                }
+                )
 
                 if (state.items.isEmpty() && !state.isIdentifying) {
                     Card { Text(
